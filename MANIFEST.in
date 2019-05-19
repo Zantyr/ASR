@@ -1,0 +1,2 @@
+recursive-include asr_demo/templates *
+recursive-include asr_demo/static *
