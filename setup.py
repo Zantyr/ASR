@@ -9,5 +9,10 @@ setup(
     zip_safe=False,
     install_requires=[
         'flask',
+        'numpy',
+        'keras',
+        'tensorflow<2.0.0',
+        'scipy',
+        'librosa'
     ],
 )

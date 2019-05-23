@@ -1,30 +1,35 @@
-from flask import render_template, flash, redirect
+from flask import render_template, redirect, request
 
 from asr_demo import app
 
+import json
+import numpy as np
 import os
 import scipy.io.wavfile as sio
+import tempfile
 
-from engine import get_engine
+from asr_demo.engine import get_engine
 
 @app.route('/')
 def index():
-    app.logger.warning('sample message')
     return render_template('index.html')
 
 @app.route('/predict', methods=['POST'])
 def predict():
+    print(request.files)
     if 'recording' not in request.files:
-        return json.dumps(['No file passed'])
+        json.dumps(['No file passed']), 400
     file = request.files['recording']
     if file.filename == '':
-        return json.dumps(['No file passed'])
+        json.dumps(['No file passed']), 400
     if file:
-        filename = secure_filename(file.filename)
-        file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
-        sr, recording = sio.read(filename)[0]
-        assert sr == 16000
-        engine = get_engine(recording)
-        phonemes = engine.predict(recording)
+        filename = tempfile.mktemp()
+        try:
+            file.save(filename)
+            rec = sio.read(filename)[1].astype(np.float32) / 2**15
+            engine = get_engine()
+            return engine.predict_phones(rec)
+        finally:
+            os.remove(filename)
     else:
-        return json.dumps(['No file passed'])
+        return json.dumps(['No file passed']), 400 

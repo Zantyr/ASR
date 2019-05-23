@@ -2,11 +2,18 @@
 
 ASR
 
+This document is templated using [cookiecutter](https://github.com/audreyr/cookiecutter).
+
 ## How's it done?
 
-Flask app from cookiecutter. ASR from my (future) master's. Model is compiled for Python3.5
+Flask app from cookiecutter. ASR from my (future) master's. Model is compiled for Python 3.5, therefore it requires
+proper Python version to work correctly.
+
+The project includes training notebooks for reference.
 
 ## The API
+
+There is only one endpoint: `/redirect`. Index presents the way of calling it. Further endpoints will be added in the future.
 
 ## Quick Start
 

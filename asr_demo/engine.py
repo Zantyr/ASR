@@ -80,4 +80,9 @@ class ASR:
         feats = np.stack([self.transform(X)])
         phoneme_likelihoods = self.mdl.predict(feats)
         
-
+asr_instance = None
+def get_engine():
+    global asr_instance
+    if asr_instance is None:
+        asr_instance = ASR()
+    return asr_instance
