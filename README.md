@@ -1,6 +1,6 @@
 # ASR
 
-ASR
+Speech recognition demo. Currently uses only acoustic model (language model in development).
 
 This document is templated using [cookiecutter](https://github.com/audreyr/cookiecutter).
 
