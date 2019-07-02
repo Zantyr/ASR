@@ -1,0 +1,17 @@
+*.h5
+DASHclean
+DASHnoisy
+dataset
+datasets
+models
+openfst*
+pynini
+.ipynb_checkpoints
+*.tgz
+*.zip
+*.png
+__pycache__
+*/__pycache__
+*.pyc
+*/*.pyc
+*/*/*.pyc
