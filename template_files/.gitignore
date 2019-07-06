@@ -1,0 +1,9 @@
+cache/*
+*.pyc
+*/*.pyc
+*.wav
+bin/*
+runs/*
+model/*
+*.tgz
+*/*.tgz

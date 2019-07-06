@@ -5,7 +5,7 @@ import os
 import shutil
 import tempfile
 import zipfile
-from fwk.stage import Neural, Analytic, Normalization, Loss, DType
+from fwk.stage import Neural, Analytic, Normalization, Loss, DType, Stage
 
 _defaults = {}
 
@@ -68,7 +68,6 @@ class AcousticModel:
             if isinstance(stage, Neural):
                 if network is None:
                     network = stage.new_network(mapping.output_dtype(dset_dtype))
-                    print(network)
                 else:
                     network = stage.join(network)
             elif isinstance(stage, Loss):
@@ -147,6 +146,12 @@ class AcousticModel:
                     v.save(os.path.join(tmpdname, fname))
                     node_path = "keras://" + fname
                     separate_objects[k] = (node_path, v)
+                elif isinstance(v, Stage):
+                    fname = k + ".dill"
+                    node_path = "file://" + fname
+                    with open(os.path.join(tmpdname, fname)) as f:
+                        dill.dump(v, f)
+                    separate_objects[k] = (node_path, v)
             old_stages = self.stages[:]
             new_stages = [x.__class__ for x in self.stages]
             separate_objects["stages"] = (new_stages, old_stages)
@@ -155,6 +160,10 @@ class AcousticModel:
                     setattr(self, k, v[0])
                 with open(os.path.join(tmpdname, "root.dill"), "wb") as f:
                     dill.dump(self, f)
+                with zipfile.ZipFile(path, 'w') as zipf:
+                    for folder, _, files in os.walk(tmpdname):
+                        for fname in files:
+                            zipf.write(os.path.join(folder, fname), fname)
             finally:
                 for k, v in separate_objects.items():
                     setattr(self, k, v[1])
@@ -168,7 +177,7 @@ class AcousticModel:
             return "<Untrained acoustic model>"
         
     __repr__ = __str__
-        
+
     def summary(self, show=True):
         if self.built:
             statstring = "\n    ".join(["{}: {}".format(k, v) for k, v in self.statistics.items()])
