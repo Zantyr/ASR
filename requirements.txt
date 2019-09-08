@@ -1,0 +1,3 @@
+syntax
+git+https://github.com/detly/gammatone.git
+tqdm

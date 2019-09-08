@@ -75,11 +75,51 @@ class EqualLoudnessWeighting(Analytic):
         return sps.filtfilt(*self.filter, recording)
 
 
-class PCENScaling(ToDo):
+class PCENScaling(Analytic):
     """
+    Per Channel Energy Normalization
+    http://www.justinsalamon.com/uploads/4/3/9/4/4394963/lostanlen_pcen_spl2018.pdf
+    Also based on librosa for parameters
+    
+    sps.lfilter with [b] [1, b-1] is used to smooth, it is generally an exponential decay filter
+    """
+    def __init__(self, sr=16000, hop=128, time_constant=0.4):
+        self.alpha = 0.98
+        self.delta = 2
+        self.r = 0.5
+        self.epsilon = 1e-6
+        t_frames = time_constant * sr / hop
+        self.b = b = (np.sqrt(1 + 4 * t_frames**2) - 1) / (2 * t_frames**2)
+    
+    def output_dtype(self, input_dtype):
+        if self.previous:
+            input_dtype = self.previous.output_dtype(input_dtype)
+        return input_dtype
+    
+    def _function(self, spec):
+        spec_filtered = sps.lfilter([self.b], [1, self.b - 1], spec)
+        return ((spec / (self.epsilon + spec_filtered) ** self.alpha ) + self.delta) ** self.r - self.delta ** self.r
+        
+
+class AdaptiveGainAndCompressor(Analytic):
+    """
+    In spectrogram domain
     """
 
-
-class AdaptiveGainAndCompressor(ToDo):
-    """
-    """
+    def __init__(self, sr=16000, hop=128, compression_factor=0.2, time_constant=0.4):
+        t_frames = time_constant * sr / hop
+        self.epsilon = 1e-6
+        self.b = b = (np.sqrt(1 + 4 * t_frames**2) - 1) / (2 * t_frames**2)
+        self.compression_factor = compression_factor
+        
+    def output_dtype(self, input_dtype):
+        if self.previous:
+            input_dtype = self.previous.output_dtype(input_dtype)
+        return input_dtype
+    
+    def _function(self, spec):
+        # first, blur in time to get the mean volume level
+        # then divide by this
+        # the compress by non-linear maximum, the lower the compfactor, the more compressive the compressor is
+        spec_filtered = np.abs(sps.lfilter([self.b], [1, self.b - 1], spec))
+        return (np.abs(spec) / (self.epsilon + spec_filtered)) ** self.compression_factor

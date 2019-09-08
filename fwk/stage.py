@@ -18,7 +18,7 @@ from fwk.stage_loss import CTCLoss
 from fwk.stage_transforms import PlainPowerFourier, LogPowerFourier, TrainableDQT, TrainableCZT, CZT, DQT, CommonFateTransform
 from fwk.stage_preprocessing import Window, EqualLoudnessWeighting, PCENScaling, AdaptiveGainAndCompressor
 from fwk.stage_filterbanks import TriangularERB, HarmonicTriangularERB, OverlappingHarmonicTriangularERB, RoEx, GammatoneFilterbank, MelFilterbank
-from fwk.stage_time_domain import GammaChirp, TimeRoex, Convolve, TrainableConvolve, CARFAC
+from fwk.stage_time_domain import GammaChirp, TimeRoex, TrainableConvolve, CARFAC
 from fwk.stage_neural import EarlyDNN, EarlyConv2D, EarlyConv1D, SparseDNN, AntimonotonyLayer, RNN, LaterConv1D, LaterDNN, LaterSparse1D, TimeWarpingRNN, TimeWarpingCNN, Core
 
 
@@ -57,3 +57,11 @@ class ExcitationTrace(ToDo):
     """
     Add max of current and exponential smoothing of past features at each band
     """
+
+
+def phonemic_map(phones, activation='softmax'):
+    inp = keras.layers.Input((None, 512))
+    outp = keras.layers.Dense(phones + 1, activation=activation)(inp)
+    return Neural(keras.models.Model(inp, outp))
+
+    

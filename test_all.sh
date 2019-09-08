@@ -5,6 +5,11 @@ set -u
 failed=0
 passed=0
 
+PS1="> "
+. /venv/bin/activate
+
+python3 -m pip install -r requirements.txt
+
 python3 -c '
 from fwk.stage_meta import ToDo
 import fwk.stage

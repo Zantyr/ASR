@@ -10,11 +10,21 @@ from fwk.stage import Neural, Analytic, Normalization, Loss, DType, Stage
 _defaults = {}
 
 
-class Serializable:
+class AcousticLoader:
     """
-    All custom items that cannot be pickled should implement Serializable
-    with serialize() and deserialize()
+    Creates loadable item from object
+    Any pickleability should be done here
     """
+    
+    def __init__(self, item):
+        if isinstance(item, Stage):
+            if hasattr(item, "serialize"):
+                self.value = item.serialize()
+            else:
+                self.value = item.__class__
+    
+    def load(self):
+        return self.value
 
 
 class StopOnConvergence(keras.callbacks.Callback):
@@ -39,24 +49,12 @@ class StopOnConvergence(keras.callbacks.Callback):
                 self.model.stop_training = True
 
 
-class AcousticModel:
-    def __init__(self, stages, name=None, symbol_map=None):
+class MappingGenerator:
+    def __init__(self, stages):
         self.stages = stages
-        self.symbol_map = symbol_map
-        self.dataset_signature = None
-        self.split_signature = None
-        self.built = False
-        self.config = None
-        self.name = name if name else "blind"
-        self.metrics = []
-        self.statistics = {}
     
-    def add_metric(self, metric):
-        self.metrics.append(metric)
-    
-    def build(self, dataset, **config):
-        self.config = config
-        network, loss, mapping = None, None, None
+    def get_all(self, dataset):
+        mapping, network, loss = None, None, None
         stages = list(reversed(self.stages))
         while stages:
             if isinstance(stages[-1], Neural) or isinstance(stages[-1], Loss):
@@ -79,6 +77,38 @@ class AcousticModel:
         else:
             if network is not None:
                 raise RuntimeError("Network has not been compiled")
+        return mapping, train_network, network, loss
+                
+    def get(self, dataset):
+        return self.get_all(dataset)[0]
+                
+                
+class AcousticModel:
+    
+    _separate_lists = ["callbacks", "stages"]
+    
+    def __init__(self, stages, name=None, symbol_map=None, callbacks=None):
+        self.stages = stages
+        self.symbol_map = symbol_map
+        self.dataset_signature = None
+        self.split_signature = None
+        self.built = False
+        self.config = None
+        self.name = name if name else "blind"
+        self.metrics = []
+        self.statistics = {}
+        self.callbacks = callbacks or [
+            keras.callbacks.TerminateOnNaN(),
+            StopOnConvergence(4)
+        ]
+    
+    def add_metric(self, metric):
+        self.metrics.append(metric)
+    
+    def build(self, dataset, **config):
+        self.config = config
+        mapping_generator = MappingGenerator(self.stages)
+        mapping, train_network, network, loss = mapping_generator.get_all(dataset)
         dataset.generate(mapping, loss.requirements)
         self.dataset_signature = dataset.signature
         if network is not None:
@@ -86,7 +116,7 @@ class AcousticModel:
                                      save_weights_only=False, period=5)
             config = {
                 "batch_size":32,
-                "callbacks":[mc, StopOnConvergence(4)],
+                "callbacks":[mc] + self.callbacks,
                 "validation_data": loss.fetch_valid(dataset),
                 "epochs": 250,
             }
@@ -126,35 +156,28 @@ class AcousticModel:
                         new_value = keras.models.load_model(fname, custom_objects=_defaults)
                         # TODO: Add decompression of additional features (like custom tf functions)
                         setattr(new_one, k, new_value)
+            return new_one
         finally:
             shutil.rmtree(tmpdname)
 
-    def save(self, path, format=False):
+    def save(self, path, format=False, save_full=True):
         if format:
             pass # TODO: change path somehow
         tmpdname = tempfile.mkdtemp()
         try:
             separate_objects = {}
-            for k, v in self.__dict__.items():
-                if isinstance(v, Serializable):
-                    node_path = v.serialize(tmpdname, k)
-                    # TODO: add deserializer to final pickle...
-                    # this will be done when custom objects are made
-                    separate_objects[k] = (node_path, v)
-                elif isinstance(v, keras.models.Model):
+            for k in dir(self):
+                v = getattr(self, k)
+                if isinstance(v, keras.models.Model):
                     fname = k + ".h5"
                     v.save(os.path.join(tmpdname, fname))
                     node_path = "keras://" + fname
                     separate_objects[k] = (node_path, v)
-                elif isinstance(v, Stage):
-                    fname = k + ".dill"
-                    node_path = "file://" + fname
-                    with open(os.path.join(tmpdname, fname)) as f:
-                        dill.dump(v, f)
+                elif k in self._separate_lists:
+                    fname = k + ".bin"
+                    self._save_dill_builder(v, os.path.join(tmpdname, fname))
+                    node_path = "dill-builder://" + fname
                     separate_objects[k] = (node_path, v)
-            old_stages = self.stages[:]
-            new_stages = [x.__class__ for x in self.stages]
-            separate_objects["stages"] = (new_stages, old_stages)
             try:
                 for k, v in separate_objects.items():
                     setattr(self, k, v[0])
@@ -190,3 +213,28 @@ class AcousticModel:
             print(docstring)
         else:
             return docstring
+        
+    def _save_dill_builder(self, item, path):
+        print(item)
+        pass
+    
+    def _summarize(self, item):
+        if any([isinstance(item, x) for x in (tuple, list, set)]):
+            return [_summarize(x) for x in item]
+        elif any([isinstance(item, x) for x in (dict)]):
+            return {k: _summarize(v) for k, v in item.items()}
+        elif any([isinstance(item, x) for x in (str, int, float, type(None))]):
+            return item
+        else:
+            return AcousticLoader(item)
+        
+    def _unsummarize(self, item):
+        if isinstance(item, AcousticLoader):
+            return item.load()
+        elif hasattr(item, "__iter__"):
+            if hasattr(item, "__items__"):
+                return {k: _unsummarize(v) for k, v in item.items()}
+            else:
+                return [_unsummarize(k) for k in item]
+        else:
+            return item

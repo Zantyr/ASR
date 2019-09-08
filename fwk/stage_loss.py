@@ -7,13 +7,14 @@ import numpy as np
 from fwk.stage_meta import Loss
 from fwk.stage_selection_adapter import RandomSelectionAdapter
 
+
 class CTCLoss(Loss):
     def __init__(self, optimizer=None, use_noisy=False, selection_adapter=None):
         self.optimizer = optimizer if optimizer else keras.optimizers.Adam(clipnorm=1.)
         self.use_noisy = use_noisy
         self.selection_adapter = selection_adapter if selection_adapter else RandomSelectionAdapter()
         
-    def compile(self, network):
+    def compile(self, network, callbacks=[]):
         label_input = Input(shape = (None,))
         input_length = Input(name='input_length', shape=[1], dtype='int64')
         label_length = Input(name='label_length', shape=[1], dtype='int64')

@@ -52,7 +52,12 @@ class TriangularERB(ERBFilter):
         return filt / filt.sum()
 
     
-class HarmonicTriangularERB(ERBFilter): # TO DO
+class HarmonicTriangularERB(ERBFilter):
+    """
+    Apply the triangular filter and then scale in time (with 2n 3n 4n... speed)
+    Then add it with weights
+    Then scale to unit max
+    """
     def _fbank(_, freq, bounds, sr, window):
         def filt_fn(x):
             if x < bounds[0] or x > bounds[1]:
@@ -69,7 +74,10 @@ class HarmonicTriangularERB(ERBFilter): # TO DO
         return filt / filt.sum()
 
 
-class OverlappingHarmonicTriangularERB(ERBFilter): # TO DO
+class OverlappingHarmonicTriangularERB(ERBFilter):
+    """
+    As HarmonicTraingularERB but with other bounds on the filters
+    """
     def _fbank(_, freq, bounds, sr, window):
         bounds = freq - bounds[0], freq + bounds[1]
         def filt_fn(x):
@@ -110,11 +118,16 @@ class TuningCurves(ToDo):
     How to implement that?
     """
     
+    
 
 class RoEx(ToDo):
     """
-    How to implement that?
+    This is general filter but where weights are an integrated bell function
     """    
+
+    def _fbank(_, freq, bounds, sr, window):
+        pass
+
     
     
 class GammatoneFilterbank(Analytic):
@@ -146,3 +159,8 @@ class GammatoneFilterbank(Analytic):
             ret[i, :] = self.sum(gt[i * self.hop : i * self.hop + self.window, :])
         return ret
 
+
+class CARFAC(ToDo):
+    pass
+
+    

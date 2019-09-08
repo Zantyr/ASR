@@ -1,6 +1,7 @@
 import hashlib
 import numpy as np
 import os
+import random
 import scipy.io.wavfile as sio
 from fwk import stage
 import tqdm
@@ -41,7 +42,7 @@ def get_phones_clarin(fname):
 
 class Dataset:
     
-    _accepted_requirements = ["clean", "transcripts", "noisy"]
+    _accepted_requirements = ["clean", "transcripts", "noisy", "stft"]
     
     def __init__(self, noise_gen=None):
         self.root = None
@@ -78,12 +79,20 @@ class Dataset:
             self._get_transcripts()
         if "noisy" in requirements:
             self._get_noisy(mapping)
+        if "stft" in requirements:
+            self._get_stft()
         self._hash = hashlib.sha512(str(self.rec_fnames).encode("utf-8")).digest().hex()[:16]
             
     def select_first(self, count):
         self.rec_fnames = self.rec_fnames[:count]
         self.trans_fnames = self.trans_fnames[:count]
         self.recording_lengths = self.recording_lengths[:count]
+
+    def select_random(self, count):
+        selection = random.sample(range(len(self.rec_fnames)), count)
+        self.rec_fnames = [self.rec_fnames[x] for x in selection]
+        self.trans_fnames = [self.trans_fnames[x] for x in selection]
+        self.recording_lengths = [self.recording_lengths[x] for x in selection]     
         
     def generate_dtype(self, mapping):
         dtype = stage.DType("Array", [max(self.recording_lengths)], np.float32)
@@ -159,4 +168,24 @@ class Dataset:
             pass  # no normalization
         self.noisy = recordings
         self.noisy_lens = np.array(lens)
+        
+    def get_metrics(self, print=True):
+        pass
+    
+    def calculate_metric(self, recording, transcription):
+        pass
+
+    def _get_stft(self):
+        print("Getting standard STFT")
+        n_recs = len(self.rec_fnames)
+        frames = max(self.recording_lengths) // 128 - 3
+        recordings = np.zeros([n_recs, frames, 257], np.float32)
+        for ix, fname in enumerate(tqdm.tqdm(self.rec_fnames)):
+            sr, data = sio.read(fname)
+            assert sr == 16000
+            data = data.astype(np.float32) / 2**15
+            for time in range(self.recording_lengths[ix] // 128 - 3):
+                recordings[ix, time, :] = np.log(np.fft.rfft(data[time * 128 : time * 128 + 512]) ** 2 + 2e-12)
+        self.stft = recordings
+
 
