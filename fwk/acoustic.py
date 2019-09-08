@@ -2,6 +2,7 @@ import dill
 import keras
 import numpy as np
 import os
+import pynini
 import shutil
 import tempfile
 import zipfile
@@ -17,13 +18,18 @@ class AcousticLoader:
     """
     
     def __init__(self, item):
+        self.builder = None
         if isinstance(item, Stage):
             if hasattr(item, "serialize"):
                 self.value = item.serialize()
+                if isinstance(self.value, tuple):
+                    self.builder, self.value = self.value
             else:
                 self.value = item.__class__
     
     def load(self):
+        if self.builder:
+            return self.builder(self.value)
         return self.value
 
 
@@ -129,16 +135,58 @@ class AcousticModel:
             self.statistics[metric.name] = metric.calculate(*loss.fetch_test(dataset))
         # predict and calculate - loss has to have "calculate"
         self.built = True
-                        
-    def predict(self, recording):
-        pass
+
+    def predict_raw(self, recording):
+        if len(recording.shape) == 2:
+            recording = np.stack([recording])
+        return self.network.predict(recording)
+        
+    def predict(self, recording, literal=True, number_of_preds=1, beam_width=2500):
+        predictions = self.predict_raw(recording)
+        decoded = K.ctc_decode(predictions, [predictions.shape[1]] * predictions.shape[0], greedy=False, beam_width=beam_width, top_paths=number_of_preds)
+        if literal:
+            all_translations = []
+            for recording in (decoded[x] for x in range(decoded.shape[0])):
+                rec_translations = []
+                for attempt in recording:
+                    rec_translations.append([self.symbol_map[x] for x in attempt])
+                all_translations.append(rec_translations)
+            return all_translations
+        else:
+            return decoded
     
     def to_wfst(self, recording):
-        pass
+        phonemes = self.predict_raw(recording)
+        EPSILON = 0
+        fst = pynini.Fst()
+        init = fst.add_state()
+        fst.set_start(init)
+        heads = [(init, EPSILON)]
+        num_of_letters = phonemes.shape[2]
+        time = phonemes.shape[1]
+        letters = [x+1 for x in range(num_of_letters)]
+        for time in range(time):
+            states = [fst.add_state() for _ in letters]
+            log_phonemes = -np.log(phonemes[0])
+            for entering_state, head in heads:
+                for letter, letter_state in zip(letters, states):
+                    if letter == len(letters):
+                        letter = 0
+                    # letter_state = fst.add_state()
+                    output_sign = head if head != letter else 0
+                    weight = log_phonemes[time, letter]
+                    fst.add_arc(entering_state, pynini.Arc(
+                        letter, output_sign, weight, letter_state))
+            heads = list(zip(states, letters))
+        [fst.set_final(x[0]) for x in heads]
+        if optimize:
+            fst.optimize()
+        return fst
     
     @classmethod
     def load(self, path):
         tmpdname = tempfile.mkdtemp()
+        print(os.listdir(tmpdname))
         try:
             with zipfile.ZipFile(path) as f:
                 f.extractall(tmpdname)
@@ -156,6 +204,12 @@ class AcousticModel:
                         new_value = keras.models.load_model(fname, custom_objects=_defaults)
                         # TODO: Add decompression of additional features (like custom tf functions)
                         setattr(new_one, k, new_value)
+                    elif v.startswith("dill-builder://"):
+                        fname = os.path.join(tmpdname, v.split("://")[1])
+                        with open(fname, "rb") as f:
+                            new_one = dill.load(f)
+                        new_one = self._unsummarize(new_one, tmpdname)
+                        setattr(new_one, k, new_one)
             return new_one
         finally:
             shutil.rmtree(tmpdname)
@@ -215,26 +269,28 @@ class AcousticModel:
             return docstring
         
     def _save_dill_builder(self, item, path):
-        print(item)
-        pass
+        item = self._summarize(item, path)
+        print(path)
+        with open(os.path.join(tmpdname, path), "wb") as f:
+            new_one = dill.dump(item, f)
     
-    def _summarize(self, item):
+    def _summarize(self, item, path):
         if any([isinstance(item, x) for x in (tuple, list, set)]):
-            return [_summarize(x) for x in item]
+            return [self._summarize(x, path) for x in item]
         elif any([isinstance(item, x) for x in (dict)]):
-            return {k: _summarize(v) for k, v in item.items()}
+            return {k: self._summarize(v, path) for k, v in item.items()}
         elif any([isinstance(item, x) for x in (str, int, float, type(None))]):
             return item
         else:
             return AcousticLoader(item)
         
-    def _unsummarize(self, item):
+    def _unsummarize(self, item, tmpdname):
         if isinstance(item, AcousticLoader):
             return item.load()
         elif hasattr(item, "__iter__"):
             if hasattr(item, "__items__"):
-                return {k: _unsummarize(v) for k, v in item.items()}
+                return {k: self._unsummarize(v, tmpdname) for k, v in item.items()}
             else:
-                return [_unsummarize(k) for k in item]
+                return [self._unsummarize(k, tmpdname) for k in item]
         else:
             return item

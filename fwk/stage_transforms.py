@@ -2,7 +2,8 @@
 All methods that transfomrm from time to frequency domain and vice-versa
 """
 
-from fwk.stage_meta import ToDo, Analytic, DType
+from fwk.stage_meta import ToDo, Analytic, DType, Neural
+from fwk.stage_layers import CZT
 
 import numpy as np
 
@@ -43,12 +44,19 @@ class LogPowerFourier(Analytic):
         return mapped
     
 
-class TrainableDQT(ToDo):
+class TrainableDQT(Neural):
     pass
 
 
 class TrainableCZT(ToDo):
-    pass
+    def __init__(self):
+        pass
+        
+    def new_network(self, dtype):
+        first = inp = keras.layers.Input(shape=[None] + dtype.shape[1:])
+        outp = CZT()(conv_layer)
+        mdl = Model(first, outp)
+        return mdl
 
 
 class CZT(Analytic):
@@ -103,3 +111,21 @@ class CommonFateTransform(Analytic):
         for i in range(shape[0]):
             mapped[i] = np.fft.fft(recording[i])
         return spec2d(mapped, self.x_win, self.y_win)
+
+
+class CQT(Analytic):
+    def __init__(self, real=True):
+        self.real = real
+        self.hop_length = 128
+        self.sr = 16000
+    
+    def output_dtype(self, input_dtype):
+        if self.previous:
+            input_dtype = self.previous.output_dtype(input_dtype)
+        return DType("Array", [input_dtype.shape[0], input_dtype.shape[1] // 2 + 1], np.float32)
+    
+    def _function(self, recording):
+        mapped = librosa.cqt(recording, sr=self.sr, hop_length=self.hop_length)
+        if self.real:
+            mapped = np.abs(mapped)
+        return mapped

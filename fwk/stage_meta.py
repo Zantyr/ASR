@@ -58,8 +58,12 @@ class SelectionAdapter(metaclass=abc.ABCMeta):
     @property
     def test(self):
         return self._test
-
     
+    @abc.abstractmethod
+    def serialize(self):
+        pass
+
+
 class Stage(metaclass=abc.ABCMeta):
     """
     """
@@ -131,7 +135,11 @@ class Loss(Stage, metaclass=abc.ABCMeta):
     def fetch_test(self, dataset):
         pass
 
-    
+    @abc.abstractmethod
+    def serialize(self):
+        pass
+
+
 class DType(Show):
     def __init__(self, cls, shape, dtype):
         self.cls = cls
@@ -173,6 +181,10 @@ class Neural(Stage):
             return self.graph(shape.shape[-1])
         return self.graph
 
+    def serialize(self):
+        self.graph.save(path)
+        return lambda: keras.model.load_model(path)
+
     
 class Analytic(Stage):
     @property
@@ -187,3 +199,6 @@ class Analytic(Stage):
         if self.previous is None:
             return self._function(recording)
         return self._function(self.previous.map(recording))
+
+    def serialize(self):
+        return self

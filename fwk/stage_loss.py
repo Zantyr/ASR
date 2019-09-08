@@ -5,14 +5,14 @@ from keras.models import Model
 import numpy as np
 
 from fwk.stage_meta import Loss
-from fwk.stage_selection_adapter import RandomSelectionAdapter
+from fwk.stage_selection_adapter import SpeakerSelectionAdapter
 
 
 class CTCLoss(Loss):
     def __init__(self, optimizer=None, use_noisy=False, selection_adapter=None):
         self.optimizer = optimizer if optimizer else keras.optimizers.Adam(clipnorm=1.)
         self.use_noisy = use_noisy
-        self.selection_adapter = selection_adapter if selection_adapter else RandomSelectionAdapter()
+        self.selection_adapter = selection_adapter if selection_adapter else SpeakerSelectionAdapter()
         
     def compile(self, network, callbacks=[]):
         label_input = Input(shape = (None,))
@@ -83,3 +83,20 @@ class CTCLoss(Loss):
             dataset.clean_lens[selection],
             dataset.transcription_lens[selection]
         ], np.zeros(dataset.clean[selection].shape[0])]
+
+    def serialize(self):
+        info = dict(optimizer=self.optimizer.__class__,
+                    optimizer_config=self.optimizer.get_config(),
+                    use_noisy=self.use_noisy,
+                    selection_adapter=self.selection_adapter)
+        return CTCLoss.builder, info
+
+    @staticmethod
+    def builder(info):
+        optimizer = info["optimizer"]()
+        optimizer.set_config(info["optimizer_config"])
+        return CTCLoss(
+            optimizer=optimizer,
+            use_noisy=info["use_noisy"],
+            selection_adapter=info["selection_adapter"]
+        )

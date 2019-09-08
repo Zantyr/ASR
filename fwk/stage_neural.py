@@ -3,11 +3,13 @@ All later layers of the network
 """
 
 import keras
+from keras.initializers import Orthogonal
 from keras.models import Model
+from tensorflow.spectral import dct
 
 import keras.backend as K
 
-from fwk.stage_meta import ToDo, Neural
+from fwk.stage_meta import ToDo, Neural, Analytic
 
 
 class DNN(Neural):
@@ -126,7 +128,7 @@ class RNN(Neural):
         if len(dtype.shape) > 2:
             first = keras.layers.Flatten()(first)
         for i in range(self.depth):
-            inp = keras.layers.GRU(self.width, activation='linear', return_sequences=True)(inp)
+            inp = keras.layers.GRU(self.width, activation='linear', return_sequences=True, kernel_initializer=Orthogonal())(inp)
             inp = keras.layers.LeakyReLU(0.01)(inp)
             inp = keras.layers.BatchNormalization()(inp)
         outp = inp
@@ -155,13 +157,13 @@ class Core(Neural):
     """
     Deprecated, left for tests sake
     """
-    def __init__(self, width=512, depth=7):
+    def __init__(self, width=512, depth=3):
         self.width, self.depth = width, depth
         
     def new_network(self, dtype):
         first = inp = keras.layers.Input(shape=[None, dtype.shape[1]])
         for i in range(self.depth):
-            inp = keras.layers.GRU(self.width, activation='linear', return_sequences=True)(inp)
+            inp = keras.layers.GRU(self.width, activation='linear', return_sequences=True, kernel_initializer=Orthogonal())(inp)
             inp = keras.layers.LeakyReLU(0.01)(inp)
             inp = keras.layers.BatchNormalization()(inp)
         outp = inp
@@ -170,6 +172,14 @@ class Core(Neural):
 
     def bind(self, other):
         pass
+
+
+class SpectralCoefficients(ToDo):
+    """
+    Spectral Coefficients -> for MFCC
+    """
+    def spectral_coeffs(x):
+        return dct(K.log(x**2 + 2e-12))[:, :, :20]
 
 
 ### Below are the aliases needed for the convenience of the dissertation

@@ -47,6 +47,7 @@ class AbstractModelTraining(Task):
 
         @classmethod
         def summary(self, cache, show=False):
+            print(cache)
             am = acoustic.AcousticModel.load(os.path.join(cache, "model.zip"))
             return am.summary(show=show)
             

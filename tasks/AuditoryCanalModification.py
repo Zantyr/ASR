@@ -19,7 +19,7 @@ class BaselineModelPCEN(metaclass=AbstractModelTraining):
             # Early neural effects - not used
             # Low level features - not used
             # Modelling cortical processes
-            stage.Core(width=512, depth=3),
+            stage.RNN(width=512, depth=3),
             # Time warping
             stage.phonemic_map(37),
             stage.CTCLoss()
@@ -39,7 +39,7 @@ class BaselineModelAdaptive(metaclass=AbstractModelTraining):
             # Early neural effects - not used
             # Low level features - not used
             # Modelling cortical processes
-            stage.Core(width=512, depth=3),
+            stage.RNN(width=512, depth=3),
             # Time warping
             stage.phonemic_map(37),
             stage.CTCLoss()
@@ -59,7 +59,7 @@ class BaselineModelEqualA(metaclass=AbstractModelTraining):
             # Early neural effects - not used
             # Low level features - not used
             # Modelling cortical processes
-            stage.Core(width=512, depth=3),
+            stage.RNN(width=512, depth=3),
             # Time warping
             stage.phonemic_map(37),
             stage.CTCLoss()
@@ -79,7 +79,7 @@ class BaselineModelEqualB(metaclass=AbstractModelTraining):
             # Early neural effects - not used
             # Low level features - not used
             # Modelling cortical processes
-            stage.Core(width=512, depth=3),
+            stage.RNN(width=512, depth=3),
             # Time warping
             stage.phonemic_map(37),
             stage.CTCLoss()
@@ -99,7 +99,7 @@ class BaselineModelEqualC(metaclass=AbstractModelTraining):
             # Early neural effects - not used
             # Low level features - not used
             # Modelling cortical processes
-            stage.Core(width=512, depth=3),
+            stage.RNN(width=512, depth=3),
             # Time warping
             stage.phonemic_map(37),
             stage.CTCLoss()
