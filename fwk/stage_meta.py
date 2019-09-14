@@ -152,13 +152,23 @@ class DType(Show):
     
     
 class Neural(Stage):
+    
+    """
+    Make all neural stages compose with each other...
+    """
+    
     def __init__(self, graph):
         super().__init__()
-        self.graph = graph
+        self._graph = graph
     
     @property
     def trainable(self):
         return True
+    
+    def graph(self, shape):
+        if not hasattr(self, "_graph"):
+            return self.new_network(shape)
+        return self._graph(shape)
     
     def output_dtype(self, input_dtype):
         # assert whether inut_dtype matches the input

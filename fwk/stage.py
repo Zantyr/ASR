@@ -15,12 +15,12 @@ from syntax import Show
 from fwk.stage_meta import SelectionAdapter, Stage, NetworkableMixin, Loss, Analytic, Neural, ToDo, DType
 from fwk.stage_selection_adapter import RandomSelectionAdapter, SpeakerSelectionAdapter
 from fwk.stage_loss import CTCLoss
-from fwk.stage_transforms import PlainPowerFourier, LogPowerFourier, TrainableDQT, TrainableCZT, CZT, DQT, CommonFateTransform
+from fwk.stage_transforms import PlainPowerFourier, LogPowerFourier, TrainableCQT, TrainableCZT, CZT, CQT, CommonFateTransform
 from fwk.stage_preprocessing import Window, EqualLoudnessWeighting, PCENScaling, AdaptiveGainAndCompressor
 from fwk.stage_filterbanks import TriangularERB, HarmonicTriangularERB, OverlappingHarmonicTriangularERB, RoEx, GammatoneFilterbank, MelFilterbank
 from fwk.stage_time_domain import GammaChirp, TimeRoex, TrainableConvolve, CARFAC
-from fwk.stage_neural import EarlyDNN, EarlyConv2D, EarlyConv1D, SparseDNN, AntimonotonyLayer, RNN, LaterConv1D, LaterDNN, LaterSparse1D, TimeWarpingRNN, TimeWarpingCNN, Core
-
+from fwk.stage_neural import EarlyDNN, EarlyConv2D, EarlyConv1D, SparseDNN, AntimonotonyLayer, RNN, LaterConv1D, LaterDNN, LaterSparse1D, TimeWarpingRNN, TimeWarpingCNN, Core, CNN2D
+from fwk.stage_misc import LogPower
 
 
 

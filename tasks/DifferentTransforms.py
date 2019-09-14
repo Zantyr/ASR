@@ -1,22 +1,37 @@
-import fwk.acoustic as acoustic
-import fwk.stage as stage
+from tasks.core import AbstractModelTraining
 
-import keras
 
-from core import AbstractModelTraining
-
-    
-class BaselineModelPCEN(metaclass=AbstractModelTraining):
+class LogPowerDQT(metaclass=AbstractModelTraining):
     
     @classmethod
     def get_acoustic_model(self):
         return acoustic.AcousticModel([
-            # Transmission model
-            stage.PCENScaling(),
-            # Frequency analysis in cochlea
+            # Transmission model - not used
             stage.Window(512, 512),
-            stage.LogPowerFourier(),
+            stage.DQT(),  # Frequency analysis in cochlea
+            stage.LogPower(),
             # Early neural effects - not used
+            # Low level features
+            stage.CNN2D(channels=16, filter_size=5, depth=2),
+            # Modelling cortical processes
+            stage.RNN(width=512, depth=2),
+            # Time warping
+            stage.phonemic_map(37),
+            stage.CTCLoss()
+        ])
+    
+
+class LogPowerDQTFilters(metaclass=AbstractModelTraining):
+    
+    @classmethod
+    def get_acoustic_model(self):
+        return acoustic.AcousticModel([
+            # Transmission model - not used
+            stage.Window(512, 512),
+            stage.DQT(),  # Frequency analysis in cochlea
+            stage.LogPower(),
+            # Early neural effects - not used
+            stage.TriangularERB(),
             # Low level features
             stage.CNN2D(channels=16, filter_size=5, depth=2),
             # Modelling cortical processes
@@ -27,16 +42,35 @@ class BaselineModelPCEN(metaclass=AbstractModelTraining):
         ])
 
     
-class BaselineModelAdaptive(metaclass=AbstractModelTraining):
+class TrainableDQTExperiment(metaclass=AbstractModelTraining):
     
     @classmethod
     def get_acoustic_model(self):
         return acoustic.AcousticModel([
-            # Transmission model
-            stage.AdaptiveGainAndCompressor(),
-            # Frequency analysis in cochlea
+            # Transmission model - not used
             stage.Window(512, 512),
-            stage.LogPowerFourier(),
+            stage.NeuralDQT(),  # Frequency analysis in cochlea
+            stage.LogPower(),
+            # Early neural effects - not used
+            # Low level features - not used
+            stage.CNN2D(channels=16, filter_size=5, depth=2),
+            # Modelling cortical processes
+            stage.RNN(width=512, depth=2),
+            # Time warping
+            stage.phonemic_map(37),
+            stage.CTCLoss()
+        ])
+
+    
+class TrainableCZTExperiment(metaclass=AbstractModelTraining):
+    
+    @classmethod
+    def get_acoustic_model(self):
+        return acoustic.AcousticModel([
+            # Transmission model - not used
+            stage.Window(512, 512),
+            stage.NeuralCZT(),  # Frequency analysis in cochlea
+            stage.LogPower(),
             # Early neural effects - not used
             # Low level features - not used
             stage.CNN2D(channels=16, filter_size=5, depth=2),
@@ -48,58 +82,15 @@ class BaselineModelAdaptive(metaclass=AbstractModelTraining):
         ])
 
 
-class BaselineModelEqualA(metaclass=AbstractModelTraining):
+class CommonFateTransformTraining(metaclass=AbstractModelTraining):
     
     @classmethod
     def get_acoustic_model(self):
         return acoustic.AcousticModel([
-            # Transmission model
-            stage.EqualLoudnessWeighting("A"),
-            # Frequency analysis in cochlea
+            # Transmission model - not used
             stage.Window(512, 512),
-            stage.LogPowerFourier(),
-            # Early neural effects - not used
-            # Low level features - not used
-            stage.CNN2D(channels=16, filter_size=5, depth=2),
-            # Modelling cortical processes
-            stage.RNN(width=512, depth=2),
-            # Time warping
-            stage.phonemic_map(37),
-            stage.CTCLoss()
-        ])
-
-
-class BaselineModelEqualB(metaclass=AbstractModelTraining):
-    
-    @classmethod
-    def get_acoustic_model(self):
-        return acoustic.AcousticModel([
-            # Transmission model
-            stage.EqualLoudnessWeighting("A"),
-            # Frequency analysis in cochlea
-            stage.Window(512, 512),
-            stage.LogPowerFourier(),
-            # Early neural effects - not used
-            # Low level features - not used
-            stage.CNN2D(channels=16, filter_size=5, depth=2),
-            # Modelling cortical processes
-            stage.RNN(width=512, depth=2),
-            # Time warping
-            stage.phonemic_map(37),
-            stage.CTCLoss()
-        ])
-
-
-class BaselineModelEqualC(metaclass=AbstractModelTraining):
-    
-    @classmethod
-    def get_acoustic_model(self):
-        return acoustic.AcousticModel([
-            # Transmission model
-            stage.EqualLoudnessWeighting("C"),
-            # Frequency analysis in cochlea
-            stage.Window(512, 512),
-            stage.LogPowerFourier(),
+            stage.CommonFateTransform(),  # Frequency analysis in cochlea
+            stage.LogPower(),
             # Early neural effects - not used
             # Low level features - not used
             stage.CNN2D(channels=16, filter_size=5, depth=2),

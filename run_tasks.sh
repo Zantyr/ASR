@@ -12,11 +12,14 @@ for i in os.listdir("tasks"):
 cache = "'"$CACHE_PATH"'"
 state = syntax.utils.PersistentState(cache + "/state")
 for task in core.Task.all():
-    if task.name not in state.keys():
-        state[task.name] = task.name
-    this_cache = os.path.join(cache, state[task.name])
-    if not task.validate(this_cache):
-        task.run(this_cache)
+    try:
+        if task.name not in state.keys():
+            state[task.name] = task.name
+        this_cache = os.path.join(cache, state[task.name])
+        if not task.validate(this_cache):
+            task.run(this_cache)
+    except:
+        pass
 
 # Fetch all results...
 for task in core.Task.all():

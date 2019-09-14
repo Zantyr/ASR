@@ -6,6 +6,7 @@ import os
 
 from fwk.stage_meta import SelectionAdapter, ToDo
 
+
 class RandomSelectionAdapter(SelectionAdapter):
     """
     Divide recordings fully randomly. 

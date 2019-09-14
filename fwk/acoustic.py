@@ -5,6 +5,7 @@ import os
 import pynini
 import shutil
 import tempfile
+import time
 import zipfile
 from fwk.stage import Neural, Analytic, Normalization, Loss, DType, Stage
 
@@ -60,7 +61,7 @@ class MappingGenerator:
         self.stages = stages
     
     def get_all(self, dataset):
-        mapping, network, loss = None, None, None
+        mapping, train_network, network, loss = None, None, None, None
         stages = list(reversed(self.stages))
         while stages:
             if isinstance(stages[-1], Neural) or isinstance(stages[-1], Loss):
@@ -78,6 +79,11 @@ class MappingGenerator:
                 train_network = stage.compile(network)
                 loss = stage
                 break
+            elif isinstance(stage, Analytic):
+                if hasattr(stage, "to_network"):
+                    network = stage.to_network(network)
+                else:
+                    raise TypeError("Analytic joint to network without to_network() method")
             else:
                 raise TypeError("Incorrect subtype of Stage")
         else:
@@ -103,6 +109,7 @@ class AcousticModel:
         self.name = name if name else "blind"
         self.metrics = []
         self.statistics = {}
+        self.complexity, self.building_time = None, None
         self.callbacks = callbacks or [
             keras.callbacks.TerminateOnNaN(),
             StopOnConvergence(4)
@@ -112,6 +119,7 @@ class AcousticModel:
         self.metrics.append(metric)
     
     def build(self, dataset, **config):
+        start_time = time.time()
         self.config = config
         mapping_generator = MappingGenerator(self.stages)
         mapping, train_network, network, loss = mapping_generator.get_all(dataset)
@@ -134,6 +142,8 @@ class AcousticModel:
         for metric in self.metrics:
             self.statistics[metric.name] = metric.calculate(*loss.fetch_test(dataset))
         # predict and calculate - loss has to have "calculate"
+        self.building_time = time.time() - start_time
+        self.complexity = None
         self.built = True
 
     def predict_raw(self, recording):
@@ -259,8 +269,9 @@ class AcousticModel:
         if self.built:
             statstring = "\n    ".join(["{}: {}".format(k, v) for k, v in self.statistics.items()])
             docstring = ("--------\nTrained acoustic model named \"{}\"\nDataset signature: {}\n"
-                         "Dataset train-valid-test selector signature: {}\nStatistics:\n"
-                         "    {}\n--------").format(self.name, self.dataset_signature, self.split_signature, statstring)
+                         "Dataset train-valid-test selector signature: {}\nTraining time: {}\n"
+                         "Model complexity: {}\nStatistics:\n"
+                         "    {}\n--------").format(self.name, self.dataset_signature, self.split_signature, self.building_time, self.complexity, statstring)
         else:
             docstring = "Untrained acoustic model named \"{}\"".format(self.name)
         if show:

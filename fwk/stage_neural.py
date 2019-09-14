@@ -82,7 +82,7 @@ class CNN2D(Neural):
     def new_network(self, dtype):
         first = inp = keras.layers.Input(shape=[None] + dtype.shape[1:])
         if len(dtype.shape) == 2:
-            first = keras.layers.Lambda(K.expand_dims)(first)
+            inp = keras.layers.Lambda(K.expand_dims)(inp)
         for i in range(self.depth):
             inp = keras.layers.Conv2D(self.channels, self.filter_size, padding='same', activation='linear')(inp)
             inp = keras.layers.LeakyReLU(0.01)(inp)
@@ -119,8 +119,8 @@ class RNN(Neural):
     """
     Recurrent RNN for last layer of the network
     """
-    def __init__(self, width=512, depth=3):
-        self.width, self.depth = width, depth
+    def __init__(self, width=512, depth=3, core=keras.layers.LSTM):
+        self.width, self.depth, self.core = width, depth, core
         
     def new_network(self, dtype):
         # if previous is 4D, flatten
@@ -128,7 +128,7 @@ class RNN(Neural):
         if len(dtype.shape) > 2:
             first = keras.layers.Flatten()(first)
         for i in range(self.depth):
-            inp = keras.layers.GRU(self.width, activation='linear', return_sequences=True, kernel_initializer=Orthogonal())(inp)
+            inp = self.core(self.width, activation='linear', return_sequences=True, kernel_initializer=Orthogonal())(inp)
             inp = keras.layers.LeakyReLU(0.01)(inp)
             inp = keras.layers.BatchNormalization()(inp)
         outp = inp

@@ -4,6 +4,16 @@ import fwk.acoustic as acoustic
 import fwk.dataset as dataset
 
 
+"""
+TODO:
+- saving // loading
+- running the network
+- creation of chains for language models
+- test coverage
+
+"""
+
+
 class Task(type):
     
     _instances = {}

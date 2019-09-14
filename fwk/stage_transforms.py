@@ -44,8 +44,24 @@ class LogPowerFourier(Analytic):
         return mapped
     
 
-class TrainableDQT(Neural):
-    pass
+# How to implement this? Original CQT is hard to do...
+class TrainableCQT(Neural):
+    def __init__(self, real=True):
+        self.real = real
+        self.hop_length = 128
+        self.sr = 16000
+    
+    def new_network(self, recording):
+        cqt_frequencies = ...
+        Q = ...
+        __early_downsample = ...
+        fft_basis, n_fft, _ = __cqt_filter_fft
+        for i in range(n_octaves):
+            pass
+        pass
+        if self.real:
+            mapped = K.abs(mapped)
+        return mapped
 
 
 class TrainableCZT(ToDo):
@@ -79,10 +95,6 @@ class CZT(Analytic):
         for i in range(shape[0]):
             mapped[i] = func((self.z ** np.arange(self.win_size) * record[i]).outer(self.w ** np.arange(self.win_size)))
         return mapped
-
-
-class DQT(ToDo):
-    pass
 
 
 def spec2d(image, x_win, y_win, x_hop=1, y_hop=1):
