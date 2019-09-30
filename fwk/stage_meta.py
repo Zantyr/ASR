@@ -65,8 +65,6 @@ class SelectionAdapter(metaclass=abc.ABCMeta):
 
 
 class Stage(metaclass=abc.ABCMeta):
-    """
-    """
 
     @property
     @abc.abstractmethod
@@ -157,45 +155,53 @@ class Neural(Stage):
     Make all neural stages compose with each other...
     """
     
-    def __init__(self, graph):
+    def __init__(self):
         super().__init__()
-        self._graph = graph
     
     @property
     def trainable(self):
         return True
     
-    def graph(self, shape):
-        if not hasattr(self, "_graph"):
-            return self.new_network(shape)
-        return self._graph(shape)
-    
     def output_dtype(self, input_dtype):
-        # assert whether inut_dtype matches the input
-        return DType("Tensor", self.graph.output_shape, self.graph.dtype)
+        raise RuntimeError("Not used")
 
     def bind(self, previous):
-        if previous is None:
-            return self.new_network()
-        else:
-            return keras.models.Model(previous.inputs, self.graph(previous.outputs))
-
-    def join(self, previous):
-        return keras.models.Model(previous.inputs, self.graph(previous.outputs))
+        raise RuntimeError("Not used")
         
     def map(self, recording):
-        pass
+        """
+        Stages should have different interfaces, this method is not required
+        """
+        raise RuntimeError("Not used")
     
-    def new_network(self, shape):
-        if callable(shape):
-            return self.graph(shape.shape[-1])
-        return self.graph
+    def new_network(self, dtype):
+        """
+        Should create a new network giving an Input layer as an input to the model
+        """
+        input_layer = keras.layers.Input([None] + list(dtype.shape[1:]))
+        return keras.models.Model(input_layer, self.get_graph()(input_layer))
 
-    def serialize(self):
-        self.graph.save(path)
-        return lambda: keras.model.load_model(path)
+    def join(self, previous):
+        """
+        When joining, should get the output of the previous model and pass
+        it as an input to the new network
+        """
+        return keras.models.Model(previous.inputs, self.get_graph()(previous.outputs[0]))
 
-    
+
+class CustomNeural(Neural):    
+    """
+    Neural models, which have custom implementation.
+    """
+    def __init__(self, graph):
+        super().__init__()
+        self._graph = graph
+        
+    def get_graph(self):
+        return self._graph
+
+
+
 class Analytic(Stage):
     @property
     def trainable(self):

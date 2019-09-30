@@ -3,8 +3,8 @@
 # update repos
 apt-get update
 
-# get git
-apt-get -y install git
+# get git and sound eXchange
+apt-get -y install git sox libsox-fmt-all
 
 # install additional python modules
 pip install -r requirements.txt

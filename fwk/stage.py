@@ -12,15 +12,15 @@ from keras.layers import Input, Lambda
 from keras.models import Model
 from syntax import Show
 
-from fwk.stage_meta import SelectionAdapter, Stage, NetworkableMixin, Loss, Analytic, Neural, ToDo, DType
+from fwk.stage_meta import SelectionAdapter, Stage, NetworkableMixin, Loss, Analytic, Neural, CustomNeural, ToDo, DType
 from fwk.stage_selection_adapter import RandomSelectionAdapter, SpeakerSelectionAdapter
 from fwk.stage_loss import CTCLoss
-from fwk.stage_transforms import PlainPowerFourier, LogPowerFourier, TrainableCQT, TrainableCZT, CZT, CQT, CommonFateTransform
+from fwk.stage_transforms import PlainPowerFourier, LogPowerFourier, TrainableCQT, TrainableCZT, CZT, CQT, CommonFateTransform, DCT, Cochleagram
 from fwk.stage_preprocessing import Window, EqualLoudnessWeighting, PCENScaling, AdaptiveGainAndCompressor
 from fwk.stage_filterbanks import TriangularERB, HarmonicTriangularERB, OverlappingHarmonicTriangularERB, RoEx, GammatoneFilterbank, MelFilterbank
-from fwk.stage_time_domain import GammaChirp, TimeRoex, TrainableConvolve, CARFAC
+from fwk.stage_time_domain import GammaChirp, TimeRoex, TrainableConvolve, CARFAC, HandCrafted, PLC
 from fwk.stage_neural import EarlyDNN, EarlyConv2D, EarlyConv1D, SparseDNN, AntimonotonyLayer, RNN, LaterConv1D, LaterDNN, LaterSparse1D, TimeWarpingRNN, TimeWarpingCNN, Core, CNN2D
-from fwk.stage_misc import LogPower
+from fwk.stage_misc import LogPower, ConcatFeatures
 
 
 
@@ -60,8 +60,8 @@ class ExcitationTrace(ToDo):
 
 
 def phonemic_map(phones, activation='softmax'):
-    inp = keras.layers.Input((None, 512))
-    outp = keras.layers.Dense(phones + 1, activation=activation)(inp)
-    return Neural(keras.models.Model(inp, outp))
+    def cb(inp):
+        return keras.layers.Dense(phones + 1, activation=activation)(inp)
+    return CustomNeural(cb)
 
     

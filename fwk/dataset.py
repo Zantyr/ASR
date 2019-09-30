@@ -39,6 +39,24 @@ def get_phones_clarin(fname):
         s = [x.split('_')[0] for x in s]
     return s
 
+def get_words_clarin(fname):
+    with open(fname, "r", encoding="utf-8") as f:
+        s = f.read()
+        s = s.split("Word Word")[1]
+        s = s.split("\n\n")[0]
+        s = [x.split(' ')[1] for x in s.split('\n') if x.strip()]
+        s = [x.split('_')[0] for x in s]
+    return s
+
+def get_pronounciations_clarin(fname):
+    with open(fname, "r", encoding="utf-8") as f:
+        s = f.read()
+        s = s.split("\n\n\n")[1]
+        s = [x.split(' ') for x in s.split('\n') if x.strip()]
+        s = [(x[0], x[1:]) for x in s if len(x) > 1]
+    return s
+
+
 
 class Dataset:
     
@@ -52,6 +70,8 @@ class Dataset:
         self.trans_fnames = None
         self.transcriptions = None
         self.transcription_lens = None
+        self.word_transcriptions = None
+        self.word_transcription_lens = None
         self.clean = None
         self.clean_lens = None
         self.noisy = None
@@ -77,6 +97,8 @@ class Dataset:
             self._get_cleans(mapping)
         if "transcripts" in requirements:
             self._get_transcripts()
+        if "word_transcripts" in requirements:
+            self._get_word_transcripts()
         if "noisy" in requirements:
             self._get_noisy(mapping)
         if "stft" in requirements:
@@ -125,6 +147,20 @@ class Dataset:
         self.transcriptions = transes
         self.transcription_lens = np.array(trans_lens)
 
+    def _get_word_transcripts(self):
+        print("Getting lists of words")
+        transes = [get_words_clarin(x) for x in tqdm.tqdm(self.trans_fnames)]
+        trans_lens = [len(x) for x in transes]
+        self.word_transcriptions = transes
+        self.word_transcription_lens = np.array(trans_lens)
+        print("Getting vocabulary")
+        words = [get_pronounciations_clarin(x) for x in tqdm.tqdm(self.trans_fnames)]
+        for ix, word_pron_list in enumerate(words):
+            words = transes[ix]
+            phone = self.transcriptions[ix]
+            # TODO
+
+        
     def _get_cleans(self, mapping):
         print("Getting clean recordings")
         n_recs = len(self.rec_fnames)

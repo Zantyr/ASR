@@ -93,8 +93,7 @@ class CTCLoss(Loss):
 
     @staticmethod
     def builder(info):
-        optimizer = info["optimizer"]()
-        optimizer.set_config(info["optimizer_config"])
+        optimizer = info["optimizer"].from_config(info["optimizer_config"])
         return CTCLoss(
             optimizer=optimizer,
             use_noisy=info["use_noisy"],

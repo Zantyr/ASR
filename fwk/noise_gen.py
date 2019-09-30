@@ -63,6 +63,8 @@ class CodecSox(NoiseGenerator):
         "amr-nb-lq": {"ext": ".amr-nb", "opt": ["-C", "0"]},
         "amr-nb-hq": {"ext": ".amr-nb", "opt": ["-C", "7"]},
         "amr-wb": {"ext": ".amr-wb", "opt": []},
+        "mp3-lq": {"ext": ".mp3", "opt": ["-C", "96.10"]},
+        "mp3-hq": {"ext": ".mp3", "opt": ["-C", "192.1"]},
     }
     
     def __init__(self, fmt):

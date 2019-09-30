@@ -17,35 +17,33 @@ class DNN(Neural):
         self.depth = depth
         self.size = size
         
-    def new_network(self, dtype):
-        first = inp = keras.layers.Input(shape=[None] + dtype.shape[1:])
-        if len(dtype.shape) > 2:
-            first = keras.layers.Flatten()(first)
-        for i in range(self.depth):
-            inp = keras.layers.Dense(self.size, activation='linear')(inp)
-            inp = keras.layers.LeakyReLU(0.01)(inp)
-            inp = keras.layers.BatchNormalization()(inp)
-        outp = inp
-        mdl = Model(first, outp)
-        return mdl
-
+    def get_graph(self):
+        def maker(inp):
+            if len(inp.shape) > 3:
+                inp = keras.layers.TimeDistributed(keras.layers.Flatten())(inp)
+            for i in range(self.depth):
+                inp = keras.layers.Dense(self.size, activation='linear')(inp)
+                inp = keras.layers.LeakyReLU(0.01)(inp)
+                inp = keras.layers.BatchNormalization()(inp)
+            return inp
+        return maker
+        
 
 class CNN1D(Neural):
     def __init__(self, channels=256, filter_size=5, depth=3):
         self.depth, self.channels = depth, channels
         self.filter_size = filter_size
-        
-    def new_network(self, dtype):
-        first = inp = keras.layers.Input(shape=[None] + dtype.shape[1:])
-        if len(dtype.shape) == 2:
-            first = keras.layers.Lambda(K.expand_dims)(first)
-        for i in range(self.depth):
-            inp = keras.layers.Conv1D(self.channels, self.filter_size, padding='same', activation='linear')(inp)
-            inp = keras.layers.LeakyReLU(0.01)(inp)
-            inp = keras.layers.BatchNormalization()(inp)
-        outp = inp
-        mdl = Model(first, outp)
-        return mdl
+
+    def get_graph(self):
+        def maker(inp):
+            if len(inp.shape) < 3:
+                inp = keras.layers.Lambda(K.expand_dims)(inp)
+            for i in range(self.depth):
+                inp = keras.layers.Conv1D(self.channels, self.filter_size, padding='same', activation='linear')(inp)
+                inp = keras.layers.LeakyReLU(0.01)(inp)
+                inp = keras.layers.BatchNormalization()(inp)
+            return inp
+        return maker        
 
 
 class SparseDNN(Neural):
@@ -55,19 +53,18 @@ class SparseDNN(Neural):
         self.penalty_size = 25
         self.weight_percentage = 0.1
         self.typical_weight = 0.01
-        
-    def new_network(self, dtype):
-        first = inp = keras.layers.Input(shape=[None] + dtype.shape[1:])
-        if len(dtype.shape) > 2:
-            first = keras.layers.Flatten()(first)
-        l1 = self.penalty_size / (self.weight_percentage * self.typical_weight * first.shape[-1] * self.size)  
-        for i in range(self.depth):
-            inp = keras.layers.Dense(self.size, activation='linear', kernel_regularizer=keras.regularizers.L1L2(l1=l1, l2=0))(inp)
-            inp = keras.layers.LeakyReLU(0.01)(inp)
-            inp = keras.layers.BatchNormalization()(inp)
-        outp = inp
-        mdl = Model(first, outp)
-        return mdl
+
+    def get_graph(self):
+        def maker(inp):
+            if len(inp.shape) > 3:
+                finp = keras.layers.Flatten()(inp)
+            l1 = self.penalty_size / (self.weight_percentage * self.typical_weight * first.shape[-1] * self.size)  
+            for i in range(self.depth):
+                inp = keras.layers.Dense(self.size, activation='linear', kernel_regularizer=keras.regularizers.L1L2(l1=l1, l2=0))(inp)
+                inp = keras.layers.LeakyReLU(0.01)(inp)
+                inp = keras.layers.BatchNormalization()(inp)
+            return inp
+        return maker        
 
 
 class AntimonotonyLayer(ToDo):
@@ -78,18 +75,22 @@ class CNN2D(Neural):
     def __init__(self, channels=32, filter_size=5, depth=3):
         self.depth, self.channels = depth, channels
         self.filter_size = filter_size
-        
-    def new_network(self, dtype):
-        first = inp = keras.layers.Input(shape=[None] + dtype.shape[1:])
-        if len(dtype.shape) == 2:
-            inp = keras.layers.Lambda(K.expand_dims)(inp)
-        for i in range(self.depth):
-            inp = keras.layers.Conv2D(self.channels, self.filter_size, padding='same', activation='linear')(inp)
-            inp = keras.layers.LeakyReLU(0.01)(inp)
-            inp = keras.layers.BatchNormalization()(inp)
-        outp = inp
-        mdl = Model(first, outp)
-        return mdl
+
+    def get_graph(self):
+        def maker(inp):
+            while len(inp.shape) > 4:
+                inp = keras.layers.TimeDistributed(
+                keras.layers.TimeDistributed(
+                    keras.layers.Flatten()
+                ))(inp)
+            while len(inp.shape) < 4:
+                inp = keras.layers.Lambda(K.expand_dims)(inp)
+            for i in range(self.depth):
+                inp = keras.layers.Conv2D(self.channels, self.filter_size, padding='same', activation='linear')(inp)
+                inp = keras.layers.LeakyReLU(0.01)(inp)
+                inp = keras.layers.BatchNormalization()(inp)
+            return inp
+        return maker        
 
 
 class SparseCNN1D(Neural):
@@ -99,20 +100,18 @@ class SparseCNN1D(Neural):
         self.penalty_size = 25
         self.weight_percentage = 0.1
         self.typical_weight = 0.01
-        
-    def new_network(self, dtype):
-        first = inp = keras.layers.Input(shape=[None] + dtype.shape[1:])
-        if len(dtype.shape) == 2:
-            first = keras.layers.Lambda(K.expand_dims)(first)
-        l1 = self.penalty_size / (self.weight_percentage * self.typical_weight * first.shape[1] * first.shape[2] * self.size)
-        for i in range(self.depth):
-            inp = keras.layers.Conv1D(self.channels, self.filter_size, padding='same', activation='linear', kernel_regularizer=keras.regularizers.L1L2(l1=l1, l2=0))(inp)
-            inp = keras.layers.LeakyReLU(0.01)(inp)
-            inp = keras.layers.BatchNormalization()(inp)
-        outp = inp
-        mdl = Model(first, outp)
-        return mdl
 
+    def get_graph(self):
+        def maker(inp):
+            while len(inp.shape) < 3:
+                inp = keras.layers.Lambda(K.expand_dims)(inp)
+            l1 = self.penalty_size / (self.weight_percentage * self.typical_weight * first.shape[1] * first.shape[2] * self.size)
+            for i in range(self.depth):
+                inp = keras.layers.Conv1D(self.channels, self.filter_size, padding='same', activation='linear', kernel_regularizer=keras.regularizers.L1L2(l1=l1, l2=0))(inp)
+                inp = keras.layers.LeakyReLU(0.01)(inp)
+                inp = keras.layers.BatchNormalization()(inp)
+            return inp
+        return maker
 
 
 class RNN(Neural):
@@ -121,19 +120,16 @@ class RNN(Neural):
     """
     def __init__(self, width=512, depth=3, core=keras.layers.LSTM):
         self.width, self.depth, self.core = width, depth, core
-        
-    def new_network(self, dtype):
-        # if previous is 4D, flatten
-        first = inp = keras.layers.Input(shape=[None] + dtype.shape[1:])
-        if len(dtype.shape) > 2:
-            first = keras.layers.Flatten()(first)
-        for i in range(self.depth):
-            inp = self.core(self.width, activation='linear', return_sequences=True, kernel_initializer=Orthogonal())(inp)
-            inp = keras.layers.LeakyReLU(0.01)(inp)
-            inp = keras.layers.BatchNormalization()(inp)
-        outp = inp
-        mdl = Model(first, outp)
-        return mdl
+
+    def get_graph(self):
+        def maker(inp):
+            while len(inp.shape) > 3:
+                inp = keras.layers.TimeDistributed(keras.layers.Flatten())(inp)
+            for i in range(self.depth):
+                inp = self.core(self.width, return_sequences=True, kernel_initializer=Orthogonal())(inp)
+                inp = keras.layers.BatchNormalization()(inp)
+            return inp
+        return maker        
 
 
 class Finalize(Neural):
@@ -145,7 +141,7 @@ class Finalize(Neural):
         self.activation = activation
         
     def new_network(self, dtype):
-        first = inp = keras.layers.Input(shape=[None] + dtype.shape[1:])
+        first = inp = keras.layers.Input(shape=([None] + list(dtype.shape[1:])))
         if len(dtype.shape) > 2:
             first = keras.layers.Flatten()(first)
         outp = keras.layers.Dense(self.phoneme_num, activation=self.activation)

@@ -96,7 +96,7 @@ class OverlappingHarmonicTriangularERB(ERBFilter):
 
     
 class MelFilterbank(Analytic):
-    def __init__(self, n_mels, fmin=20, fmax=8000, sr=16000):
+    def __init__(self, n_mels=24, fmin=20, fmax=8000, sr=16000):
         self.mel_basis = None
         self.n_mels = n_mels
         self.fmin = fmin
@@ -106,7 +106,9 @@ class MelFilterbank(Analytic):
     def output_dtype(self, input_dtype):
         if self.previous:
             input_dtype = self.previous.output_dtype(input_dtype)
+        print()
         self.mel_basis = librosa.filters.mel(self.sr, (input_dtype.shape[1] - 1) * 2, self.n_mels, self.fmin, self.fmax).T
+        print([input_dtype.shape[0], self.n_mels])
         return DType("Array", [input_dtype.shape[0], self.n_mels], np.float32)
     
     def _function(self, recording):

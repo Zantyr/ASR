@@ -1,11 +1,15 @@
 """
 All methods that transfomrm from time to frequency domain and vice-versa
+
+ToDo: add window functions
 """
 
 from fwk.stage_meta import ToDo, Analytic, DType, Neural
 from fwk.stage_layers import CZT
 
+import gammatone.gtgram as gtgram
 import numpy as np
+import scipy.fftpack as spfft
 
 
 class PlainPowerFourier(Analytic):
@@ -86,10 +90,11 @@ class CZT(Analytic):
     def output_dtype(self, input_dtype):
         if self.previous:
             input_dtype = self.previous.output_dtype(input_dtype)
+        print(input_dtype.shape)
         return DType("Array", input_dtype.shape,  np.float32 if self.real else np.complex64)
     
     def _function(self, record):
-        shape = list(recording.shape)
+        shape = list(record.shape)
         mapped = np.zeros(shape, np.float32 if self.real else np.complex64)
         func = (lambda x: x) if self.real else np.abs
         for i in range(shape[0]):
@@ -99,7 +104,7 @@ class CZT(Analytic):
 
 def spec2d(image, x_win, y_win, x_hop=1, y_hop=1):
     x_size = (image.shape[0] + 1 - x_win) // x_hop
-    y_size = (image.shape[0] + 1 - y_win) // y_hop
+    y_size = (image.shape[1] + 1 - y_win) // y_hop
     spec = np.zeros([x_size, y_size, x_win, y_win], np.complex64)
     for x in range(x_size):
         for y in range(y_size):
@@ -108,20 +113,29 @@ def spec2d(image, x_win, y_win, x_hop=1, y_hop=1):
 
 
 class CommonFateTransform(Analytic):
-    def __init__(self, x_win, y_win):
+    # apply this to an existing windowing
+    def __init__(self, x_win, y_win, log_power=True, final_absolute=True):
         self.x_win = x_win
         self.y_win = y_win
+        self.log_power = log_power
+        self.final_absolute = final_absolute
 
     def output_dtype(self, input_dtype):
         if self.previous:
             input_dtype = self.previous.output_dtype(input_dtype)
-        return DType("Array", [input_dtype.shape[0] + 1 - self.x_win, input_dtype.shape[1] + 1 - self.y_win, self.x_win, self.y_win], np.float32)
+        return DType("Array", [input_dtype.shape[0] + 1 - self.x_win, input_dtype.shape[1] + 1 - self.y_win, self.x_win, self.y_win], (
+        np.float32 if self.final_absolute else np.complex64))
     
     def _function(self, recording):
         shape = list(recording.shape)
         mapped = np.zeros(shape, np.float64)
         for i in range(shape[0]):
-            mapped[i] = np.fft.fft(recording[i])
+            if self.log_power:
+                mapped[i] = np.log(np.abs(np.fft.fft(recording[i])) + 2e-12)
+            else:
+                mapped[i] = np.abs(np.fft.fft(recording[i]))
+        if self.final_absolute:
+            return np.abs(spec2d(mapped, self.x_win, self.y_win))
         return spec2d(mapped, self.x_win, self.y_win)
 
 
@@ -141,3 +155,44 @@ class CQT(Analytic):
         if self.real:
             mapped = np.abs(mapped)
         return mapped
+
+
+class DCT(Analytic):
+    def __init__(self, num=24):
+        self.num = num
+    
+    def output_dtype(self, input_dtype):
+        if self.previous:
+            input_dtype = self.previous.output_dtype(input_dtype)
+        return DType("Array", [input_dtype.shape[0], self.num], np.float32)
+    
+    def _function(self, recording):
+        shape = list(recording.shape)
+        shape[1] = self.num
+        mapped = np.zeros(shape, np.float32)
+        for i in range(shape[0]):
+            mapped[i] = spfft.dct(recording[i], n=self.num)
+        return mapped
+
+
+class Cochleagram(Analytic):
+    def __init__(self, num_banks=24, window_time=512, hop_time=128, fs=16000):
+        self.num_banks = num_banks
+        self.fs = fs
+        self.window_time = window_time
+        self.hop_time = hop_time
+    
+    def output_dtype(self, input_dtype):
+        if self.previous:
+            input_dtype = self.previous.output_dtype(input_dtype)
+        time = (input_dtype[0] - self.window_time) // self.hop_time + 1
+        return DType("Array", [time, self.num_banks], np.float32)
+    
+    def _function(self, recording):
+        gram = gtgram.gtgram(recording,
+                             fs=self.fs,
+                             window_time=(self.window_time / self.fs),
+                             hop_time=(self.hop_time / self.fs),
+                             channels=self.num_banks,
+                             f_min=20).T
+        return gram

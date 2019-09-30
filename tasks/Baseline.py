@@ -1,9 +1,10 @@
 import fwk.acoustic as acoustic
 import fwk.stage as stage
+from fwk.tasks import AbstractModelTraining
 
 import keras
 
-from core import AbstractModelTraining
+
 
 
 class BaselineModelSTFT(metaclass=AbstractModelTraining):

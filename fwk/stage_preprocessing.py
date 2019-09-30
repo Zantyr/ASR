@@ -10,6 +10,8 @@ class Window(Analytic):
     Divide recording into uniform overlapping windows
     Those can form a basis to different transforms
     Can apply windowing function
+    
+    TODO: Add Hamming window
     """
     def __init__(self, size, hop, win_func=None):
         self.size = size
@@ -18,6 +20,7 @@ class Window(Analytic):
         self.previous = None
 
     def output_dtype(self, input_dtype):
+        print("Windowing", [1 + input_dtype.shape[0] // self.hop, self.size])
         return DType("Array", [1 + input_dtype.shape[0] // self.hop, self.size], np.float32)
 
     def _function(self, recording):
@@ -83,13 +86,14 @@ class PCENScaling(Analytic):
     
     sps.lfilter with [b] [1, b-1] is used to smooth, it is generally an exponential decay filter
     """
-    def __init__(self, sr=16000, hop=128, time_constant=0.4):
+    def __init__(self, sr=16000, hop=128, time_constant=0.4, normalize=True):
         self.alpha = 0.98
         self.delta = 2
         self.r = 0.5
         self.epsilon = 1e-6
         t_frames = time_constant * sr / hop
         self.b = b = (np.sqrt(1 + 4 * t_frames**2) - 1) / (2 * t_frames**2)
+        self.normalize = normalize
     
     def output_dtype(self, input_dtype):
         if self.previous:
@@ -97,6 +101,8 @@ class PCENScaling(Analytic):
         return input_dtype
     
     def _function(self, spec):
+        if self.normalize:
+            spec = spec - spec.min()
         spec_filtered = sps.lfilter([self.b], [1, self.b - 1], spec)
         return ((spec / (self.epsilon + spec_filtered) ** self.alpha ) + self.delta) ** self.r - self.delta ** self.r
         

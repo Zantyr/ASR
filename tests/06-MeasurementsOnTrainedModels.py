@@ -3,32 +3,28 @@ sys.path.append(".")
 
 import fwk.acoustic as acoustic
 import fwk.dataset as dataset
+import fwk.metricization as metricization
 import fwk.stage as stage
+import fwk.noise_gen as noise_gen
 
 import keras
 import numpy as np
 
-dset = dataset.Dataset()
+dset = dataset.Dataset(noise_gen.Static())
 dset.get_from("datasets/clarin-long/data")
 dset.select_first(100)
-
-
-def mk_model():
-    inp = keras.layers.Input((None, 512))
-    outp = keras.layers.Dense(38, activation='softmax')(inp)
-    return keras.models.Model(inp, outp)
 
 am = acoustic.AcousticModel([
     stage.Window(512, 512),
     stage.LogPowerFourier(),
     stage.MelFilterbank(20),
     stage.Core(width=512, depth=1),
-    stage.Neural(mk_model()),
+    stage.phonemic_map(37),
     stage.CTCLoss()
 ])
-
 am.build(dset)
-am.summary()
-am.save("models/test-metrics.zip", format=False)
-model = acoustic.AcousticModel.load("models/test-metrics.zip")
-model.get_metrics(show=True)
+
+comparator = metricization.RecordMetricization(am)
+comparator.add_metric(metricization.PER())
+metrics = comparator.on_dataset(dset)
+metrics.summary()
