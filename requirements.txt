@@ -1,3 +1,6 @@
 syntax
 git+https://github.com/detly/gammatone.git
 tqdm
+eyed3
+pyAudioAnalysis==0.2.5
+pydub

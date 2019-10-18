@@ -1,14 +1,3 @@
-# Q client
-# This is to automatically install uniform PICTEC environment, so we don't need to port everything
-# across platforms.
-
-# Specifications:
-# Python 3.5
-# cuda 9
-# ubuntu 16.04
-
-
-##### TENSORFLOW PART
 FROM nvidia/cuda:9.0-base-ubuntu16.04
 
 RUN apt-get update && apt-get upgrade -y python3
@@ -76,9 +65,7 @@ RUN wget https://github.com/Yelp/dumb-init/releases/download/v1.2.2/dumb-init_1.
 RUN dpkg -i dumb-init_*.deb
 
 ##### Install dependencies for the libraries
-RUN apt-get update
-RUN apt-get install -y --no-install-recommends libeigen3-dev scons cmake libgtest-dev mercurial python3-numpy-dev swig
-RUN apt-get install -y --no-install-recommends graphviz
+RUN apt-get install -y --no-install-recommends libeigen3-dev scons cmake libgtest-dev graphviz mercurial python3-numpy-dev swig
 
 ##### Download and build LM toolkits
 RUN git clone https://github.com/kylebgorman/pynini
@@ -94,13 +81,15 @@ RUN cd openfst-1.7.2 && `cat configure.bak | sed 's/	print \([^''"]*''\)/	print(
 # RUN cd pynini && python setup.py install
 
 ##### Get and install Carfac
-# RUN git clone https://github.com/google/carfac.git
-# RUN hg clone https://bitbucket.org/MartinFelis/eigen3swig
-# RUN swig -python -c++ carfac.i
-# RUN g++ -fPIC -shared -std=c++11 carfac/cpp/sai.cc carfac/cpp/ear.cc carfac/cpp/carfac.cc -I/usr/include/eigen3  -Doverride= -o carfac/cpp/all.so
-# RUN g++ -c -fPIC -std=c++11 carfac_wrap.cxx -I/usr/include/python3.5 -I/usr/include/eigen3 -o carfac_wrap.o
-# RUN g++ -shared -fPIC carfac_wrap.o carfac/cpp/all.so -o _carfac.so
+RUN git clone https://github.com/google/carfac.git
+RUN hg clone https://bitbucket.org/MartinFelis/eigen3swig
+RUN swig -python -c++ carfac.i
+RUN g++ -fPIC -shared -std=c++11 carfac/cpp/sai.cc carfac/cpp/ear.cc carfac/cpp/carfac.cc -I/usr/include/eigen3  -Doverride= -o carfac/cpp/all.so
+RUN g++ -c -fPIC -std=c++11 carfac_wrap.cxx -I/usr/include/python3.5 -I/usr/include/eigen3 -o carfac_wrap.o
+RUN g++ -shared -fPIC carfac_wrap.o carfac/cpp/all.so -o _carfac.so
 
-##### Run Jupyter
+##### Run Jupyter
+EXPOSE 8888
+EXPOSE 8900
 ENTRYPOINT ["/usr/bin/dumb-init", "--"]
 CMD ["bash", "-c", "source /etc/bash.bashrc && source /static/runtime.sh && exec env LD_LIBRARY_PATH=/usr/local/lib:$LD_LIBRARY_PATH jupyter notebook --notebook-dir=/asr --ip 0.0.0.0 --no-browser --allow-root"]
