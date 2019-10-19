@@ -30,6 +30,7 @@ import fwks.miscellanea as miscellanea
 from fwks.stage import RandomSelectionAdapter
 
 import keras
+import numpy as np
 
 
 def mfcc_model(preprocessing_distortion=None):
@@ -44,7 +45,7 @@ def mfcc_model(preprocessing_distortion=None):
             stage.CNN2D(channels=16, filter_size=5, depth=2),
             stage.RNN(width=512, depth=2),
             stage.phonemic_map(37),
-            stage.CTCLoss(RandomSelectionAdapter())
+            stage.CTCLoss(selection_adapter=RandomSelectionAdapter())
         ], callbacks=[
             keras.callbacks.TerminateOnNaN(),
             miscellanea.StopOnConvergence(4),
@@ -61,7 +62,7 @@ def handcrafted_model(preprocessing_distortion=None):
             stage.CNN2D(channels=16, filter_size=5, depth=2),
             stage.RNN(width=512, depth=2),
             stage.phonemic_map(37),
-            stage.CTCLoss(RandomSelectionAdapter())
+            stage.CTCLoss(selection_adapter=RandomSelectionAdapter())
         ], callbacks=[
             keras.callbacks.TerminateOnNaN(),
             miscellanea.StopOnConvergence(4),
@@ -78,7 +79,7 @@ def plc_model(preprocessing_distortion=None):
             stage.CNN2D(channels=16, filter_size=5, depth=2),
             stage.RNN(width=512, depth=2),
             stage.phonemic_map(37),
-            stage.CTCLoss(RandomSelectionAdapter())
+            stage.CTCLoss(selection_adapter=RandomSelectionAdapter())
         ], callbacks=[
             keras.callbacks.TerminateOnNaN(),
             miscellanea.StopOnConvergence(4),
@@ -95,7 +96,7 @@ def melfilterbank(preprocessing_distortion=None):
             stage.CNN2D(channels=16, filter_size=5, depth=2),
             stage.RNN(width=512, depth=2),
             stage.phonemic_map(37),
-            stage.CTCLoss(RandomSelectionAdapter())
+            stage.CTCLoss(selection_adapter=RandomSelectionAdapter())
         ], callbacks=[
             keras.callbacks.TerminateOnNaN(),
             miscellanea.StopOnConvergence(4),
@@ -112,7 +113,7 @@ def cochleagram(preprocessing_distortion=None):
             stage.CNN2D(channels=16, filter_size=5, depth=2),
             stage.RNN(width=512, depth=2),
             stage.phonemic_map(37),
-            stage.CTCLoss(RandomSelectionAdapter())
+            stage.CTCLoss(selection_adapter=RandomSelectionAdapter())
         ], callbacks=[
             keras.callbacks.TerminateOnNaN(),
             miscellanea.StopOnConvergence(4),
@@ -130,7 +131,7 @@ def MFCC_PCEN():
         stage.CNN2D(channels=16, filter_size=5, depth=2),
         stage.RNN(width=512, depth=2),
         stage.phonemic_map(37),
-        stage.CTCLoss(RandomSelectionAdapter())
+        stage.CTCLoss(selection_adapter=RandomSelectionAdapter())
     ], callbacks=[
         keras.callbacks.TerminateOnNaN(),
         miscellanea.StopOnConvergence(4),
@@ -148,7 +149,7 @@ def MFCCEqA():
         stage.CNN2D(channels=16, filter_size=5, depth=2),
         stage.RNN(width=512, depth=2),
         stage.phonemic_map(37),
-        stage.CTCLoss(RandomSelectionAdapter())
+        stage.CTCLoss(selection_adapter=RandomSelectionAdapter())
     ], callbacks=[
         keras.callbacks.TerminateOnNaN(),
         miscellanea.StopOnConvergence(4),
@@ -166,7 +167,7 @@ def MFCCEqB():
         stage.CNN2D(channels=16, filter_size=5, depth=2),
         stage.RNN(width=512, depth=2),
         stage.phonemic_map(37),
-        stage.CTCLoss(RandomSelectionAdapter())
+        stage.CTCLoss(selection_adapter=RandomSelectionAdapter())
     ], callbacks=[
         keras.callbacks.TerminateOnNaN(),
         miscellanea.StopOnConvergence(4),
@@ -187,7 +188,7 @@ def HandcraftedMFCC():
         stage.CNN2D(channels=16, filter_size=5, depth=2),
         stage.RNN(width=512, depth=2),
         stage.phonemic_map(37),
-        stage.CTCLoss(RandomSelectionAdapter())
+        stage.CTCLoss(selection_adapter=RandomSelectionAdapter())
     ], callbacks=[
         keras.callbacks.TerminateOnNaN(),
         miscellanea.StopOnConvergence(4),
@@ -197,13 +198,13 @@ def HandcraftedMFCC():
 def CZTModel():
     return model_mod.AcousticModel([
         stage.Window(512, 128),
-        stage.CZT(), # parameters?
+        stage.CZT(z=0.999, w=0.9995 * np.exp(2j * np.pi / 512)),
         stage.DCT(24),
         stage.MeanStdNormalizer(),
         stage.CNN2D(channels=16, filter_size=5, depth=2),
         stage.RNN(width=512, depth=2),
         stage.phonemic_map(37),
-        stage.CTCLoss(RandomSelectionAdapter())
+        stage.CTCLoss(selection_adapter=RandomSelectionAdapter())
     ], callbacks=[
         keras.callbacks.TerminateOnNaN(),
         miscellanea.StopOnConvergence(4),
@@ -220,7 +221,7 @@ def stft_max_melfbank_model():
         stage.CNN2D(channels=16, filter_size=5, depth=2),
         stage.RNN(width=512, depth=2),
         stage.phonemic_map(37),
-        stage.CTCLoss(RandomSelectionAdapter())
+        stage.CTCLoss(selection_adapter=RandomSelectionAdapter())
     ], callbacks=[
         keras.callbacks.TerminateOnNaN(),
         miscellanea.StopOnConvergence(4),
@@ -236,7 +237,7 @@ def learnable_filters_model():
         stage.CNN2D(channels=16, filter_size=5, depth=2),
         stage.RNN(width=512, depth=2),
         stage.phonemic_map(37),
-        stage.CTCLoss(RandomSelectionAdapter())
+        stage.CTCLoss(selection_adapter=RandomSelectionAdapter())
     ], callbacks=[
         keras.callbacks.TerminateOnNaN(),
         miscellanea.StopOnConvergence(4),
@@ -253,7 +254,7 @@ def missing_fundamental_model():
         stage.CNN2D(channels=16, filter_size=5, depth=2),
         stage.RNN(width=512, depth=2),
         stage.phonemic_map(37),
-        stage.CTCLoss(RandomSelectionAdapter())
+        stage.CTCLoss(selection_adapter=RandomSelectionAdapter())
     ], callbacks=[
         keras.callbacks.TerminateOnNaN(),
         miscellanea.StopOnConvergence(4),
@@ -270,7 +271,7 @@ def separated_phonemes_model():
         stage.RNN(width=512, depth=2),
         stage.phonemic_map(37),
         ###
-        stage.CTCLoss(RandomSelectionAdapter())
+        stage.CTCLoss(selection_adapter=RandomSelectionAdapter())
     ], callbacks=[
         keras.callbacks.TerminateOnNaN(),
         miscellanea.StopOnConvergence(4),

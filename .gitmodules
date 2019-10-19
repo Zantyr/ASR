@@ -1,0 +1,3 @@
+[submodule "fwks_submod"]
+	path = fwks_submod
+	url = https://github.com/Zantyr/fwks
