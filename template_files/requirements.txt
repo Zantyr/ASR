@@ -20,7 +20,7 @@ Keras==2.1.5
 librosa==0.6.0
 matplotlib==2.2.0
 multiprocess==0.70.6.1
-nltk==3.3
+nltk==3.4.5
 numpy==1.14.2
 numpydoc==0.8.0
 opencv-python==3.3.0.10
